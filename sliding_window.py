@@ -26,9 +26,9 @@ class blk(gr.interp_block):
             name='Stream to Sliding Window',
             in_sig=[np.float32],
             out_sig=[np.float32],
-            interp=window_size
+            interp=window_size//step
         )
-        self.step = step
+        self._step = step
         self._buf = np.empty(0, np.float32)
         self._window_size = window_size
 
@@ -43,6 +43,6 @@ class blk(gr.interp_block):
                 return npos
             output_items[0][npos:][:self._window_size] = self._buf[spos:][:self._window_size]
             npos += self._window_size
-            spos += self.step
+            spos += self._step
         self._buf = np.delete(self._buf, slice(spos))
         return npos
