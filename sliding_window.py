@@ -19,7 +19,7 @@ class blk(gr.interp_block):
     e.g. [0, 1, 2, 3, 4, ...] with a window size of 3: [0, 1, 2, 1, 2, 3, 2, 3, 4, ...]
     """
 
-    def __init__(self, window_size=2):
+    def __init__(self, window_size=2, step=1):
         """sliding window"""
         gr.interp_block.__init__(
             self,
@@ -28,6 +28,7 @@ class blk(gr.interp_block):
             out_sig=[np.float32],
             interp=window_size
         )
+        self.step = step
         self._buf = np.empty(0, np.float32)
         self._window_size = window_size
 
@@ -35,10 +36,13 @@ class blk(gr.interp_block):
         """sliding window"""
         self._buf = np.append(self._buf, input_items[0])
         npos = 0
+        spos = 0
         while npos <= len(output_items[0]) - self._window_size:
-            if len(self._buf) < self._window_size:
+            if len(self._buf) - spos < self._window_size:
+                self._buf = np.delete(self._buf, slice(spos))
                 return npos
-            output_items[0][npos:][:self._window_size] = self._buf[:self._window_size]
+            output_items[0][npos:][:self._window_size] = self._buf[spos:][:self._window_size]
             npos += self._window_size
-            self._buf = np.delete(self._buf, 0)
+            spos += self.step
+        self._buf = np.delete(self._buf, slice(spos))
         return npos
