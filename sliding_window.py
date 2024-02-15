@@ -10,7 +10,7 @@ import numpy as np
 from gnuradio import gr
 
 
-class blk(gr.interp_block):
+class blk(gr.basic_block):
     """
     Stream to Sliding Window.
 
@@ -21,28 +21,31 @@ class blk(gr.interp_block):
 
     def __init__(self, window_size=2, step=1):
         """sliding window"""
-        gr.interp_block.__init__(
+        gr.basic_block.__init__(
             self,
             name='Stream to Sliding Window',
             in_sig=[np.float32],
             out_sig=[np.float32],
-            interp=window_size//step
         )
         self._step = step
-        self._buf = np.empty(0, np.float32)
         self._window_size = window_size
+        self.set_history(window_size + 1)
+        self.declare_sample_delay(step)
+        self.set_output_multiple(window_size)
+        self.set_relative_rate(window_size, step)
+        self.set_min_noutput_items(window_size)
 
-    def work(self, input_items, output_items):
+    def general_work(self, input_items, output_items):
         """sliding window"""
-        self._buf = np.append(self._buf, input_items[0])
+        in_buf = input_items[0]
+        out_buf = output_items[0]
         npos = 0
         spos = 0
-        while npos <= len(output_items[0]) - self._window_size:
-            if len(self._buf) - spos < self._window_size:
-                self._buf = np.delete(self._buf, slice(spos))
-                return npos
-            output_items[0][npos:][:self._window_size] = self._buf[spos:][:self._window_size]
+        while npos <= len(out_buf) - self._window_size:
+            if len(in_buf) - spos < self._window_size:
+                break
+            out_buf[npos:][:self._window_size] = in_buf[spos:][:self._window_size]
             npos += self._window_size
             spos += self._step
-        self._buf = np.delete(self._buf, slice(spos))
+        self.consume_each(spos)
         return npos
